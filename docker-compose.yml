@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://quantalert:quantalert@postgres:5432/quantalert
+      - DUCKDB_PATH=/app/data/market_data.duckdb
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USER=
+      - SMTP_PASSWORD=
+      - SMTP_FROM=alerts@quantalert.com
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - postgres
+      - mailhog
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://quantalert:quantalert@postgres:5432/quantalert
+      - DUCKDB_PATH=/app/data/market_data.duckdb
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USER=
+      - SMTP_PASSWORD=
+      - SMTP_FROM=alerts@quantalert.com
+      - OPENALGO_API_KEY=${OPENALGO_API_KEY:-}
+      - UPSTOX_API_KEY=${UPSTOX_API_KEY:-}
+      - DHAN_API_KEY=${DHAN_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - postgres
+      - mailhog
+    command: python -m app.worker
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=quantalert
+      - POSTGRES_USER=quantalert
+      - POSTGRES_PASSWORD=quantalert
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  postgres_data:

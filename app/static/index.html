@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantAlert - Real-Time Market Alerts</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: #10b981;
+            color: white;
+            border-radius: 50px;
+            font-weight: 500;
+        }
+
+        .status.offline {
+            background: #ef4444;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .market-data {
+            grid-column: 1 / -1;
+        }
+
+        .symbols-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .symbol-card {
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .symbol-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .symbol-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .symbol-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #059669;
+            margin-bottom: 5px;
+        }
+
+        .symbol-price.falling {
+            color: #dc2626;
+        }
+
+        .symbol-change {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .alert-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .alerts-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .alert-item.triggered {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .alert-symbol {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .alert-condition {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .alert-status {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .status-triggered {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .login-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-form {
+            display: inline-flex;
+            gap: 15px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #10b981;
+        }
+
+        .notification.error {
+            background: #ef4444;
+        }
+
+        .notification.warning {
+            background: #f59e0b;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .login-form {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> QuantAlert</h1>
+            <p>Real-Time Market Alerts with Email Notifications</p>
+            <div class="status" id="connectionStatus">
+                <i class="fas fa-circle"></i>
+                <span>Connecting...</span>
+            </div>
+        </div>
+
+        <!-- Login Section -->
+        <div class="login-section" id="loginSection">
+            <div class="login-form">
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button class="btn btn-primary" onclick="login()">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+                <button class="btn btn-primary" onclick="register()">
+                    <i class="fas fa-user-plus"></i> Register
+                </button>
+            </div>
+        </div>
+
+        <!-- User Info -->
+        <div class="user-info" id="userInfo" style="display: none;">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <div>
+                <div id="userEmail"></div>
+                <button class="btn btn-danger" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" style="display: none;">
+            <!-- Market Data -->
+            <div class="card market-data">
+                <h2><i class="fas fa-chart-bar"></i> Live Market Data</h2>
+                <div class="symbols-grid" id="symbolsGrid">
+                    <!-- Symbols will be populated here -->
+                </div>
+            </div>
+
+            <div class="main-content">
+                <!-- Create Alert -->
+                <div class="card">
+                    <h2><i class="fas fa-bell"></i> Create Alert</h2>
+                    <form class="alert-form" id="alertForm">
+                        <div class="form-group">
+                            <label for="alertSymbol">Symbol</label>
+                            <select id="alertSymbol" required>
+                                <option value="">Select Symbol</option>
+                                <option value="RELIANCE">RELIANCE</option>
+                                <option value="TCS">TCS</option>
+                                <option value="INFY">INFY</option>
+                                <option value="HDFCBANK">HDFCBANK</option>
+                                <option value="ICICIBANK">ICICIBANK</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alertCondition">Condition</label>
+                            <select id="alertCondition" required>
+                                <option value="">Select Condition</option>
+                                <option value=">">Greater Than (>)</option>
+                                <option value=">=">Greater Than or Equal (>=)</option>
+                                <option value="<">Less Than (<)</option>
+                                <option value="<=">Less Than or Equal (<=)</option>
+                                <option value="==">Equal (==)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alertPrice">Target Price (₹)</label>
+                            <input type="number" id="alertPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="alertType">Alert Type</label>
+                            <select id="alertType" required>
+                                <option value="one_shot">One Shot</option>
+                                <option value="recurring">Recurring</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alertEmail">Email for Notifications</label>
+                            <input type="email" id="alertEmail" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Alert
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Alerts List -->
+                <div class="card">
+                    <h2><i class="fas fa-list"></i> Your Alerts</h2>
+                    <div class="alerts-list" id="alertsList">
+                        <!-- Alerts will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let token = localStorage.getItem('token');
+        let userEmail = localStorage.getItem('userEmail');
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            if (token && userEmail) {
+                showUserInfo();
+                loadAlerts();
+                connectWebSocket();
+            } else {
+                showLoginForm();
+            }
+        });
+
+        // Login function
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showNotification('Please enter email and password', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    token = data.access_token;
+                    userEmail = email;
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('userEmail', email);
+                    showUserInfo();
+                    loadAlerts();
+                    connectWebSocket();
+                    showNotification('Login successful!', 'success');
+                } else {
+                    showNotification('Login failed. Please check your credentials.', 'error');
+                }
+            } catch (error) {
+                showNotification('Login failed. Please try again.', 'error');
+            }
+        }
+
+        // Register function
+        async function register() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showNotification('Please enter email and password', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                if (response.ok) {
+                    showNotification('Registration successful! Please login.', 'success');
+                    document.getElementById('email').value = '';
+                    document.getElementById('password').value = '';
+                } else {
+                    const error = await response.json();
+                    showNotification(error.detail || 'Registration failed.', 'error');
+                }
+            } catch (error) {
+                showNotification('Registration failed. Please try again.', 'error');
+            }
+        }
+
+        // Logout function
+        function logout() {
+            token = null;
+            userEmail = null;
+            localStorage.removeItem('token');
+            localStorage.removeItem('userEmail');
+            if (ws) {
+                ws.close();
+            }
+            showLoginForm();
+            showNotification('Logged out successfully', 'success');
+        }
+
+        // Show user info
+        function showUserInfo() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('userEmail').textContent = userEmail;
+            document.getElementById('userAvatar').textContent = userEmail.charAt(0).toUpperCase();
+            document.getElementById('alertEmail').value = userEmail;
+        }
+
+        // Show login form
+        function showLoginForm() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'none';
+        }
+
+        // Connect WebSocket for real-time updates
+        function connectWebSocket() {
+            if (ws) {
+                ws.close();
+            }
+
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            
+            ws.onopen = function() {
+                updateConnectionStatus(true);
+                reconnectAttempts = 0;
+            };
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'price_update') {
+                    updateSymbolPrice(data.symbol, data.price, data.volume);
+                } else if (data.type === 'alert_triggered') {
+                    showNotification(`Alert triggered: ${data.symbol} ${data.condition} ${data.price}`, 'warning');
+                    loadAlerts();
+                }
+            };
+
+            ws.onclose = function() {
+                updateConnectionStatus(false);
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    setTimeout(() => {
+                        reconnectAttempts++;
+                        connectWebSocket();
+                    }, 2000);
+                }
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.innerHTML = '<i class="fas fa-circle"></i><span>Connected</span>';
+                status.className = 'status';
+            } else {
+                status.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
+                status.className = 'status offline';
+            }
+        }
+
+        // Load market symbols
+        async function loadSymbols() {
+            try {
+                const response = await fetch('/api/v1/symbols', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const symbols = await response.json();
+                    const symbolsGrid = document.getElementById('symbolsGrid');
+                    symbolsGrid.innerHTML = '';
+
+                    symbols.forEach(symbol => {
+                        const symbolCard = document.createElement('div');
+                        symbolCard.className = 'symbol-card';
+                        symbolCard.innerHTML = `
+                            <div class="symbol-name">${symbol.symbol}</div>
+                            <div class="symbol-price" id="price-${symbol.symbol}">₹${symbol.last_price || '0.00'}</div>
+                            <div class="symbol-change" id="change-${symbol.symbol}">Volume: ${symbol.volume || '0'}</div>
+                        `;
+                        symbolsGrid.appendChild(symbolCard);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading symbols:', error);
+            }
+        }
+
+        // Update symbol price
+        function updateSymbolPrice(symbol, price, volume) {
+            const priceElement = document.getElementById(`price-${symbol}`);
+            const changeElement = document.getElementById(`change-${symbol}`);
+            
+            if (priceElement && changeElement) {
+                const oldPrice = parseFloat(priceElement.textContent.replace('₹', ''));
+                const newPrice = parseFloat(price);
+                
+                priceElement.textContent = `₹${newPrice.toFixed(2)}`;
+                changeElement.textContent = `Volume: ${volume}`;
+                
+                if (oldPrice > newPrice) {
+                    priceElement.className = 'symbol-price falling';
+                } else if (oldPrice < newPrice) {
+                    priceElement.className = 'symbol-price';
+                }
+            }
+        }
+
+        // Load alerts
+        async function loadAlerts() {
+            try {
+                const response = await fetch('/api/v1/alerts', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const alerts = await response.json();
+                    const alertsList = document.getElementById('alertsList');
+                    alertsList.innerHTML = '';
+
+                    alerts.forEach(alert => {
+                        const alertItem = document.createElement('div');
+                        alertItem.className = `alert-item ${alert.is_triggered ? 'triggered' : ''}`;
+                        alertItem.innerHTML = `
+                            <div class="alert-header">
+                                <div>
+                                    <div class="alert-symbol">${alert.symbol}</div>
+                                    <div class="alert-condition">${alert.condition_type} ₹${alert.target_price}</div>
+                                </div>
+                                <span class="alert-status ${alert.is_triggered ? 'status-triggered' : 'status-active'}">
+                                    ${alert.is_triggered ? 'Triggered' : 'Active'}
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-danger" onclick="deleteAlert(${alert.id})">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                                <button class="btn btn-primary" onclick="viewTriggers(${alert.id})">
+                                    <i class="fas fa-history"></i> History
+                                </button>
+                            </div>
+                        `;
+                        alertsList.appendChild(alertItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+            }
+        }
+
+        // Create alert
+        document.getElementById('alertForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                symbol: document.getElementById('alertSymbol').value,
+                condition_type: document.getElementById('alertCondition').value,
+                target_price: parseFloat(document.getElementById('alertPrice').value),
+                alert_type: document.getElementById('alertType').value,
+                cooldown_minutes: 0
+            };
+
+            try {
+                const response = await fetch('/api/v1/alerts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    showNotification('Alert created successfully!', 'success');
+                    document.getElementById('alertForm').reset();
+                    loadAlerts();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.detail || 'Failed to create alert', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to create alert', 'error');
+            }
+        });
+
+        // Delete alert
+        async function deleteAlert(alertId) {
+            try {
+                const response = await fetch(`/api/v1/alerts/${alertId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    showNotification('Alert deleted successfully!', 'success');
+                    loadAlerts();
+                } else {
+                    showNotification('Failed to delete alert', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to delete alert', 'error');
+            }
+        }
+
+        // View triggers
+        async function viewTriggers(alertId) {
+            try {
+                const response = await fetch(`/api/v1/alerts/${alertId}/triggers`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const triggers = await response.json();
+                    let message = `Alert triggers (${triggers.length}):\n`;
+                    triggers.forEach(trigger => {
+                        message += `${trigger.triggered_at}: ${trigger.symbol} ${trigger.condition} ${trigger.target_price}\n`;
+                    });
+                    alert(message);
+                } else {
+                    showNotification('Failed to load trigger history', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to load trigger history', 'error');
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initial load
+        if (token && userEmail) {
+            loadSymbols();
+            setInterval(loadSymbols, 10000); // Refresh every 10 seconds
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+# Database Configuration (SQLite for local development)
+DATABASE_URL=sqlite:///./quantalert.db
+DUCKDB_PATH=./data/market_data.duckdb
+
+# SMTP Configuration (for email alerts)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=alerts@quantalert.com
+
+# Market Data API Keys (Choose one or more)
+
+# EASY OPTIONS (No Demat Account Required)
+# Yahoo Finance (EASIEST - No API key required!)
+# Just leave this section empty - Yahoo Finance works without any setup!
+
+# Alpha Vantage (Free tier - 5 API calls per minute)
+ALPHA_VANTAGE_API_KEY=your-alpha-vantage-key-here
+
+# ADVANCED OPTIONS (Require Demat Account)
+# Angel Broking (direct integration)
+ANGEL_API_KEY=your-angel-api-key-here
+ANGEL_CLIENT_ID=your-angel-client-id-here
+ANGEL_PASSWORD=your-angel-password-here
+ANGEL_FEED_TOKEN=your-angel-feed-token-here
+
+# OpenAlgo (unified interface for multiple brokers)
+OPENALGO_API_KEY=your-openalgo-key-here
+
+# Upstox (Direct integration)
+UPSTOX_API_KEY=your-upstox-key-here
+
+# Dhan (Direct integration)
+DHAN_API_KEY=your-dhan-key-here
+
+# JWT Configuration
+SECRET_KEY=your-secret-key-change-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
