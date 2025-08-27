@@ -26,6 +26,9 @@ class AlertRuleBase(BaseModel):
     target_price: Decimal
     alert_type: str = "one_shot"  # one_shot, recurring
     cooldown_minutes: int = 0
+    data_source: str = "tick"  # tick or ohlcv
+    column_name: str = "price"  # price, volume, open_price, high_price, low_price, close_price
+    ohlcv_timeframe_minutes: int = 1
 
 
 class AlertRuleCreate(AlertRuleBase):
@@ -39,6 +42,9 @@ class AlertRuleUpdate(BaseModel):
     alert_type: Optional[str] = None
     cooldown_minutes: Optional[int] = None
     is_active: Optional[bool] = None
+    data_source: Optional[str] = None
+    column_name: Optional[str] = None
+    ohlcv_timeframe_minutes: Optional[int] = None
 
 
 class AlertRule(AlertRuleBase):

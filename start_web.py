@@ -32,6 +32,24 @@ def check_environment():
             print("❌ No env_local.txt template found")
             return False
     
+    # Check if PostgreSQL is running (for local development)
+    try:
+        import psycopg2
+        conn = psycopg2.connect(
+            host="localhost",
+            port="5432",
+            database="quantalert",
+            user="quantalert",
+            password="quantalert"
+        )
+        conn.close()
+        print("✅ PostgreSQL connection successful")
+    except Exception as e:
+        print("⚠️  PostgreSQL not available. Please ensure Docker is running:")
+        print("   docker-compose up -d postgres")
+        print(f"   Error: {e}")
+        return False
+    
     print("✅ Environment configuration ready")
     return True
 
@@ -41,6 +59,8 @@ def initialize_database():
     try:
         # Import and create tables
         from app.database import engine, Base
+        # Ensure models are imported so SQLAlchemy knows about them
+        from app import models  # noqa: F401
         Base.metadata.create_all(bind=engine)
         print("✅ Database initialized successfully")
         return True
@@ -52,8 +72,8 @@ def start_api():
     """Start the FastAPI server"""
     print("🚀 Starting QuantAlert Web Application...")
     print("📋 What's happening:")
-    print("1. ✅ No API keys needed!")
-    print("2. ✅ Simple mock data provides real-time prices")
+    print("1. ✅ PostgreSQL database for data persistence")
+    print("2. ✅ Yahoo Finance real-time market data")
     print("3. ✅ Beautiful web interface at: http://localhost:8000")
     print("4. ✅ Real-time WebSocket updates")
     print("5. ✅ Email alerts (configure SMTP in .env)")
@@ -122,7 +142,8 @@ def main():
     print("📚 API Documentation: http://localhost:8000/docs")
     print("🔍 Health Check: http://localhost:8000/health")
     print("\n💡 Features:")
-    print("• Real-time market data (mock data)")
+    print("• Real-time market data (Yahoo Finance)")
+    print("• OHLCV and column-based alerts")
     print("• Create and manage price alerts")
     print("• Email notifications")
     print("• Beautiful responsive web interface")

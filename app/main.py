@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi import WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,7 +41,7 @@ async def health_check():
 websocket_connections = []
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket):
+async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time updates"""
     await websocket.accept()
     websocket_connections.append(websocket)

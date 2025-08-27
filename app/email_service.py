@@ -12,7 +12,10 @@ def send_alert_email(
     condition_type: str,
     target_price: Decimal,
     triggered_price: Decimal,
-    alert_type: str
+    alert_type: str,
+    data_source: str = "tick",
+    column_name: str = "price",
+    ohlcv_timeframe_minutes: int = 1
 ):
     """Send alert email notification"""
     
@@ -47,11 +50,25 @@ def send_alert_email(
             
             <div class="price-info">
                 <div class="price-row">
+                    <span class="price-label">Data Source:</span>
+                    <span class="price-value">{{ data_source.upper() }}</span>
+                </div>
+                <div class="price-row">
+                    <span class="price-label">Column:</span>
+                    <span class="price-value">{{ column_name.replace('_', ' ').title() }}</span>
+                </div>
+                {% if data_source == "ohlcv" %}
+                <div class="price-row">
+                    <span class="price-label">Timeframe:</span>
+                    <span class="price-value">{{ ohlcv_timeframe_minutes }} minutes</span>
+                </div>
+                {% endif %}
+                <div class="price-row">
                     <span class="price-label">Condition:</span>
                     <span class="price-value">{{ condition_type }} {{ target_price }}</span>
                 </div>
                 <div class="price-row">
-                    <span class="price-label">Current Price:</span>
+                    <span class="price-label">Current Value:</span>
                     <span class="price-value">₹{{ triggered_price }}</span>
                 </div>
                 <div class="price-row">
@@ -77,8 +94,11 @@ def send_alert_email(
     Your price alert has been triggered!
     
     Symbol: {{ symbol }}
+    Data Source: {{ data_source.upper() }}
+    Column: {{ column_name.replace('_', ' ').title() }}
+    {% if data_source == "ohlcv" %}Timeframe: {{ ohlcv_timeframe_minutes }} minutes{% endif %}
     Condition: {{ condition_type }} {{ target_price }}
-    Current Price: ₹{{ triggered_price }}
+    Current Value: ₹{{ triggered_price }}
     Alert Type: {{ alert_type }}
     
     This alert was sent by QuantAlert at {{ timestamp }}
@@ -97,6 +117,9 @@ def send_alert_email(
         target_price=target_price,
         triggered_price=triggered_price,
         alert_type=alert_type,
+        data_source=data_source,
+        column_name=column_name,
+        ohlcv_timeframe_minutes=ohlcv_timeframe_minutes,
         timestamp=timestamp
     )
     
@@ -106,6 +129,9 @@ def send_alert_email(
         target_price=target_price,
         triggered_price=triggered_price,
         alert_type=alert_type,
+        data_source=data_source,
+        column_name=column_name,
+        ohlcv_timeframe_minutes=ohlcv_timeframe_minutes,
         timestamp=timestamp
     )
     
@@ -131,7 +157,7 @@ def send_alert_email(
             server.send_message(msg)
         
         print(f"Alert email sent to {to_email} for {symbol}")
-        
+        # Optionally, you can return a success response or log the event
     except Exception as e:
         print(f"Failed to send email: {e}")
         raise

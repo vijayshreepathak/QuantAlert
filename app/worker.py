@@ -21,6 +21,14 @@ class AlertWorker:
     async def price_update_callback(self, symbol: str, price, volume, exchange):
         """Callback for price updates from market feed"""
         print(f"Price update: {symbol} = ₹{price}")
+        try:
+            # Persist tick and update OHLCV so alert engine and API can read
+            from decimal import Decimal
+            from .market_data import market_data
+            market_data.store_tick(symbol, Decimal(str(price)), int(volume), exchange)
+            market_data.update_ohlcv_1min(symbol, Decimal(str(price)), int(volume), exchange)
+        except Exception as e:
+            print(f"Market data persistence error: {e}")
         
         # Broadcast to WebSocket clients
         try:

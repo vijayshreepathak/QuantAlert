@@ -230,46 +230,61 @@ market_feed = MarketFeed()
 mock_feed = MockMarketFeed()
 
 async def start_market_feeds(price_callback):
-    """Start market data feeds in order of preference"""
-    
-    # SIMPLE MOCK FEED (Works immediately - no setup needed!)
-    try:
+    """Start market data feeds by configured provider or fallback"""
+    provider = getattr(settings, 'feed_provider', 'auto')
+
+    async def start_simple():
         simple_feed.set_price_callback(price_callback)
         await simple_feed.start_feed()
         print("Started Simple Mock Feed (works immediately!)")
-        return
-    except Exception as e:
-        print(f"Simple mock feed failed: {e}")
-    
-    # EASY OPTIONS (No demat account required)
-    # Yahoo Finance (no API key required)
-    try:
+
+    async def start_yahoo():
         yahoo_feed.set_price_callback(price_callback)
         await yahoo_feed.start_feed()
         print("Started Yahoo Finance feed (no API key required!)")
-        return
-    except Exception as e:
-        print(f"Yahoo Finance feed failed: {e}")
-    
-    # Alpha Vantage (free tier)
-    if hasattr(settings, 'alpha_vantage_api_key') and settings.alpha_vantage_api_key:
+
+    async def start_alpha():
+        alpha_vantage_feed.set_price_callback(price_callback)
+        await alpha_vantage_feed.start_feed()
+        print("Started Alpha Vantage feed")
+
+    if provider == 'simple':
         try:
-            await alpha_vantage_feed.start_feed()
-            alpha_vantage_feed.set_price_callback(price_callback)
-            print("Started Alpha Vantage feed")
-            return
+            return await start_simple()
+        except Exception as e:
+            print(f"Simple mock feed failed: {e}")
+    elif provider == 'yahoo':
+        try:
+            return await start_yahoo()
+        except Exception as e:
+            print(f"Yahoo Finance feed failed: {e}")
+    elif provider == 'alpha_vantage':
+        try:
+            return await start_alpha()
         except Exception as e:
             print(f"Alpha Vantage feed failed: {e}")
-    
-    # ADVANCED OPTIONS (Require demat accounts)
-    if settings.angel_api_key and settings.angel_client_id:
+    elif provider == 'angel':
+        if settings.angel_api_key and settings.angel_client_id:
+            try:
+                await angel_feed.start(price_callback)
+                print("Started Angel Broking feed")
+                return
+            except Exception as e:
+                print(f"Angel Broking feed failed: {e}")
+    # auto fallback order
+    try:
+        return await start_simple()
+    except Exception as e:
+        print(f"Simple mock feed failed: {e}")
+    try:
+        return await start_yahoo()
+    except Exception as e:
+        print(f"Yahoo Finance feed failed: {e}")
+    if hasattr(settings, 'alpha_vantage_api_key') and settings.alpha_vantage_api_key:
         try:
-            await angel_feed.start(price_callback)
-            print("Started Angel Broking feed")
-            return
+            return await start_alpha()
         except Exception as e:
-            print(f"Angel Broking feed failed: {e}")
-    
+            print(f"Alpha Vantage feed failed: {e}")
     if settings.openalgo_api_key:
         try:
             await market_feed.connect_openalgo(["RELIANCE", "TCS", "INFY", "HDFC", "ICICIBANK"])
@@ -278,7 +293,6 @@ async def start_market_feeds(price_callback):
             return
         except Exception as e:
             print(f"OpenAlgo feed failed: {e}")
-    
     if settings.upstox_api_key:
         try:
             await market_feed.connect_upstox(["RELIANCE", "TCS", "INFY", "HDFC", "ICICIBANK"])
@@ -287,7 +301,6 @@ async def start_market_feeds(price_callback):
             return
         except Exception as e:
             print(f"Upstox feed failed: {e}")
-    
     if settings.dhan_api_key:
         try:
             await market_feed.connect_dhan(["RELIANCE", "TCS", "INFY", "HDFC", "ICICIBANK"])
@@ -296,8 +309,6 @@ async def start_market_feeds(price_callback):
             return
         except Exception as e:
             print(f"Dhan feed failed: {e}")
-    
-    # Final fallback to old mock data
     print("No real market feeds available, using fallback mock data")
     mock_feed.set_price_callback(price_callback)
     await mock_feed.start_mock_feed()

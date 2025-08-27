@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS alert_rules (
     target_price DECIMAL(10, 2) NOT NULL,
     alert_type VARCHAR(20) NOT NULL DEFAULT 'one_shot' CHECK (alert_type IN ('one_shot', 'recurring')),
     cooldown_minutes INTEGER DEFAULT 0,
+    data_source VARCHAR(20) NOT NULL DEFAULT 'tick',
+    column_name VARCHAR(20) NOT NULL DEFAULT 'price',
+    ohlcv_timeframe_minutes INTEGER NOT NULL DEFAULT 1,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

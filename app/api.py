@@ -101,7 +101,10 @@ def create_alert(
         condition_type=alert.condition_type,
         target_price=alert.target_price,
         alert_type=alert.alert_type,
-        cooldown_minutes=alert.cooldown_minutes
+        cooldown_minutes=alert.cooldown_minutes,
+        data_source=alert.data_source,
+        column_name=alert.column_name,
+        ohlcv_timeframe_minutes=alert.ohlcv_timeframe_minutes
     )
     db.add(db_alert)
     db.commit()

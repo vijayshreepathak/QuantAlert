@@ -55,9 +55,39 @@ class AlertEngine:
         
         return True
     
+    def get_value_for_rule(self, symbol: str, alert_rule: AlertRule) -> Optional[Decimal]:
+        """Fetch the current value for the alert rule based on its data source and column"""
+        try:
+            if alert_rule.data_source == "tick":
+                price_data = market_data.get_latest_price(symbol)
+                if not price_data:
+                    return None
+                if alert_rule.column_name == "price":
+                    return price_data.price
+                if alert_rule.column_name == "volume":
+                    return Decimal(price_data.volume)
+                # Unsupported column for tick
+                return None
+            elif alert_rule.data_source == "ohlcv":
+                ohlcvs = market_data.get_ohlcv_1min(symbol, alert_rule.ohlcv_timeframe_minutes)
+                if not ohlcvs:
+                    return None
+                latest = ohlcvs[0]
+                mapping = {
+                    "open_price": latest.open_price,
+                    "high_price": latest.high_price,
+                    "low_price": latest.low_price,
+                    "close_price": latest.close_price,
+                    "volume": Decimal(latest.volume),
+                }
+                return mapping.get(alert_rule.column_name)
+            else:
+                return None
+        except Exception:
+            return None
+
     def process_symbol_alerts(self, symbol: str, current_price: Decimal, db: Session):
         """Process all alerts for a given symbol"""
-        # Get all active alert rules for this symbol
         alert_rules = db.query(AlertRule).filter(
             and_(
                 AlertRule.symbol == symbol,
@@ -66,11 +96,12 @@ class AlertEngine:
         ).all()
         
         for alert_rule in alert_rules:
-            # Check if condition is met
-            if self.evaluate_condition(current_price, alert_rule.condition_type, alert_rule.target_price):
-                # Check if we should trigger the alert
+            value = self.get_value_for_rule(symbol, alert_rule)
+            if value is None:
+                continue
+            if self.evaluate_condition(value, alert_rule.condition_type, alert_rule.target_price):
                 if self.should_trigger_alert(alert_rule, db):
-                    self.trigger_alert(alert_rule, current_price, db)
+                    self.trigger_alert(alert_rule, value, db)
     
     def trigger_alert(self, alert_rule: AlertRule, triggered_price: Decimal, db: Session):
         """Trigger an alert and send email notification"""
@@ -90,7 +121,10 @@ class AlertEngine:
                 condition_type=alert_rule.condition_type,
                 target_price=alert_rule.target_price,
                 triggered_price=triggered_price,
-                alert_type=alert_rule.alert_type
+                alert_type=alert_rule.alert_type,
+                data_source=alert_rule.data_source,
+                column_name=alert_rule.column_name,
+                ohlcv_timeframe_minutes=alert_rule.ohlcv_timeframe_minutes
             )
             
             # Mark email as sent

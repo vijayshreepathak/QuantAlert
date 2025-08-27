@@ -415,6 +415,28 @@
                             </select>
                         </div>
                         <div class="form-group">
+                            <label for="dataSource">Data Source</label>
+                            <select id="dataSource" required>
+                                <option value="tick">Tick</option>
+                                <option value="ohlcv">OHLCV (1m bars)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="columnName">Column</label>
+                            <select id="columnName" required>
+                                <option value="price">price</option>
+                                <option value="volume">volume</option>
+                                <option value="open_price">open_price</option>
+                                <option value="high_price">high_price</option>
+                                <option value="low_price">low_price</option>
+                                <option value="close_price">close_price</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="timeframeGroup" style="display: none;">
+                            <label for="timeframe">Timeframe (minutes)</label>
+                            <input type="number" id="timeframe" min="1" step="1" value="1">
+                        </div>
+                        <div class="form-group">
                             <label for="alertCondition">Condition</label>
                             <select id="alertCondition" required>
                                 <option value="">Select Condition</option>
@@ -730,10 +752,13 @@
             
             const formData = {
                 symbol: document.getElementById('alertSymbol').value,
+                data_source: document.getElementById('dataSource').value,
+                column_name: document.getElementById('columnName').value,
                 condition_type: document.getElementById('alertCondition').value,
                 target_price: parseFloat(document.getElementById('alertPrice').value),
                 alert_type: document.getElementById('alertType').value,
-                cooldown_minutes: 0
+                cooldown_minutes: 0,
+                ohlcv_timeframe_minutes: parseInt(document.getElementById('timeframe').value || '1')
             };
 
             try {
@@ -756,6 +781,17 @@
                 }
             } catch (error) {
                 showNotification('Failed to create alert', 'error');
+            }
+        });
+
+        // Toggle timeframe visibility based on data source
+        const dataSourceEl = document.getElementById('dataSource');
+        const timeframeGroup = document.getElementById('timeframeGroup');
+        dataSourceEl.addEventListener('change', function() {
+            if (dataSourceEl.value === 'ohlcv') {
+                timeframeGroup.style.display = 'block';
+            } else {
+                timeframeGroup.style.display = 'none';
             }
         });
 

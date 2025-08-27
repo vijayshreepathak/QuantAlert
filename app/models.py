@@ -26,6 +26,10 @@ class AlertRule(Base):
     target_price = Column(Numeric(10, 2), nullable=False)
     alert_type = Column(String(20), nullable=False, default="one_shot")  # one_shot, recurring
     cooldown_minutes = Column(Integer, default=0)
+    # New fields for OHLCV/column-based alerts
+    data_source = Column(String(20), nullable=False, default="tick")  # tick or ohlcv
+    column_name = Column(String(20), nullable=False, default="price")  # price, volume, open_price, high_price, low_price, close_price
+    ohlcv_timeframe_minutes = Column(Integer, nullable=False, default=1)
     is_active = Column(Boolean, default=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -7,7 +7,8 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://quantalert:quantalert@postgres:5432/quantalert
-      - DUCKDB_PATH=/app/data/market_data.duckdb
+      - DUCKDB_PATH=':memory:'
+      - FEED_PROVIDER=yahoo
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - SMTP_USER=
@@ -18,13 +19,14 @@ services:
     depends_on:
       - postgres
       - mailhog
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
 
   worker:
     build: .
     environment:
       - DATABASE_URL=postgresql://quantalert:quantalert@postgres:5432/quantalert
-      - DUCKDB_PATH=/app/data/market_data.duckdb
+      - DUCKDB_PATH=':memory:'
+      - FEED_PROVIDER=yahoo
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - SMTP_USER=

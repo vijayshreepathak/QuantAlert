@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
+    # Feed selection
+    feed_provider: str = "auto"  # options: auto, simple, yahoo, alpha_vantage, angel, openalgo, upstox, dhan
+    
     class Config:
         env_file = ".env"
         extra = "ignore"
