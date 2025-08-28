@@ -60,10 +60,15 @@
             color: white;
             border-radius: 50px;
             font-weight: 500;
+            transition: all 0.3s ease;
         }
 
         .status.offline {
             background: #ef4444;
+        }
+
+        .status.connecting {
+            background: #f59e0b;
         }
 
         .main-content {
@@ -97,44 +102,79 @@
 
         .symbols-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
         }
 
         .symbol-card {
             background: linear-gradient(135deg, #f8fafc, #e2e8f0);
             border-radius: 15px;
-            padding: 20px;
+            padding: 25px;
             border: 1px solid #e2e8f0;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .symbol-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .symbol-card.price-updated {
+            animation: priceFlash 1s ease;
+        }
+
+        @keyframes priceFlash {
+            0% { background: linear-gradient(135deg, #f8fafc, #e2e8f0); }
+            50% { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+            100% { background: linear-gradient(135deg, #f8fafc, #e2e8f0); }
         }
 
         .symbol-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 10px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .symbol-price {
-            font-size: 1.5rem;
-            font-weight: 700;
+            font-size: 2rem;
+            font-weight: 800;
             color: #059669;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
         }
 
         .symbol-price.falling {
             color: #dc2626;
         }
 
-        .symbol-change {
+        .symbol-price.rising {
+            color: #059669;
+        }
+
+        .symbol-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 0.9rem;
-            color: #666;
+            color: #6b7280;
+            margin-top: 10px;
+        }
+
+        .volume-info {
+            background: rgba(107, 114, 128, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .last-updated {
+            font-size: 0.75rem;
+            color: #9ca3af;
         }
 
         .alert-form {
@@ -278,6 +318,7 @@
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            justify-content: center;
         }
 
         .user-avatar {
@@ -290,21 +331,6 @@
             justify-content: center;
             color: white;
             font-weight: 600;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
 
         .notification {
@@ -348,6 +374,10 @@
             .header h1 {
                 font-size: 2rem;
             }
+
+            .symbols-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -357,7 +387,7 @@
         <div class="header">
             <h1><i class="fas fa-chart-line"></i> QuantAlert</h1>
             <p>Real-Time Market Alerts with Email Notifications</p>
-            <div class="status" id="connectionStatus">
+            <div class="status connecting" id="connectionStatus">
                 <i class="fas fa-circle"></i>
                 <span>Connecting...</span>
             </div>
@@ -378,7 +408,7 @@
         </div>
 
         <!-- User Info -->
-        <div class="user-info" id="userInfo" style="display: none;">
+        <div class="user-info" id="userInfo">
             <div class="user-avatar" id="userAvatar">U</div>
             <div>
                 <div id="userEmail"></div>
@@ -394,7 +424,7 @@
             <div class="card market-data">
                 <h2><i class="fas fa-chart-bar"></i> Live Market Data</h2>
                 <div class="symbols-grid" id="symbolsGrid">
-                    <!-- Symbols will be populated here -->
+                    <!-- Will be populated by JavaScript -->
                 </div>
             </div>
 
@@ -488,16 +518,99 @@
         let ws = null;
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
+        let lastPrices = {};
+
+        // Initialize default symbol cards to avoid "undefined"
+        function initializeDefaultSymbols() {
+            const defaultSymbols = ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'];
+            const container = document.getElementById('symbolsGrid');
+            container.innerHTML = '';
+
+            defaultSymbols.forEach(symbol => {
+                createSymbolCard(symbol, 0, 0);
+            });
+        }
+
+        // Create symbol card
+        function createSymbolCard(symbol, price, volume) {
+            const container = document.getElementById('symbolsGrid');
+            const card = document.createElement('div');
+            card.className = 'symbol-card';
+            card.setAttribute('data-symbol', symbol);
+            card.innerHTML = `
+                <div class="symbol-name">${symbol}</div>
+                <div class="symbol-price" id="price-${symbol}">₹${price.toFixed(2)}</div>
+                <div class="symbol-info">
+                    <div class="volume-info" id="volume-${symbol}">Vol: ${volume.toLocaleString()}</div>
+                    <div class="last-updated" id="time-${symbol}">--:--</div>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+
+        // Update symbol price safely
+        function updateSymbolPrice(symbol, price, volume) {
+            const card = document.querySelector(`[data-symbol="${symbol}"]`);
+            const priceElement = document.getElementById(`price-${symbol}`);
+            const volumeElement = document.getElementById(`volume-${symbol}`);
+            const timeElement = document.getElementById(`time-${symbol}`);
+            
+            if (!priceElement || !card) {
+                // Create card if it doesn't exist
+                createSymbolCard(symbol, price, volume);
+                return;
+            }
+
+            const oldPrice = lastPrices[symbol] || 0;
+            const newPrice = parseFloat(price);
+            
+            // Update price
+            priceElement.textContent = `₹${newPrice.toFixed(2)}`;
+            
+            // Update volume
+            if (volumeElement) {
+                volumeElement.textContent = `Vol: ${volume.toLocaleString()}`;
+            }
+            
+            // Update time
+            if (timeElement) {
+                const now = new Date();
+                timeElement.textContent = now.toTimeString().substr(0, 5);
+            }
+            
+            // Price movement styling
+            if (oldPrice !== 0) {
+                if (newPrice > oldPrice) {
+                    priceElement.className = 'symbol-price rising';
+                } else if (newPrice < oldPrice) {
+                    priceElement.className = 'symbol-price falling';
+                } else {
+                    priceElement.className = 'symbol-price';
+                }
+            }
+            
+            // Flash animation
+            if (oldPrice !== newPrice) {
+                card.classList.add('price-updated');
+                setTimeout(() => card.classList.remove('price-updated'), 1000);
+            }
+            
+            lastPrices[symbol] = newPrice;
+        }
 
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
+            initializeDefaultSymbols();
+            
             if (token && userEmail) {
                 showUserInfo();
                 loadAlerts();
-                connectWebSocket();
             } else {
                 showLoginForm();
             }
+            
+            // Always connect WebSocket for live data
+            connectWebSocket();
         });
 
         // Login function
@@ -527,7 +640,6 @@
                     localStorage.setItem('userEmail', email);
                     showUserInfo();
                     loadAlerts();
-                    connectWebSocket();
                     showNotification('Login successful!', 'success');
                 } else {
                     showNotification('Login failed. Please check your credentials.', 'error');
@@ -578,9 +690,6 @@
             userEmail = null;
             localStorage.removeItem('token');
             localStorage.removeItem('userEmail');
-            if (ws) {
-                ws.close();
-            }
             showLoginForm();
             showNotification('Logged out successfully', 'success');
         }
@@ -604,106 +713,84 @@
 
         // Connect WebSocket for real-time updates
         function connectWebSocket() {
-            if (ws) {
-                ws.close();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                return;
             }
 
-            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            console.log('Connecting to WebSocket:', wsUrl);
+            updateConnectionStatus('connecting');
+
+            ws = new WebSocket(wsUrl);
             
             ws.onopen = function() {
-                updateConnectionStatus(true);
+                console.log('✅ WebSocket connected');
+                updateConnectionStatus('connected');
                 reconnectAttempts = 0;
             };
 
             ws.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                if (data.type === 'price_update') {
-                    updateSymbolPrice(data.symbol, data.price, data.volume);
-                } else if (data.type === 'alert_triggered') {
-                    showNotification(`Alert triggered: ${data.symbol} ${data.condition} ${data.price}`, 'warning');
-                    loadAlerts();
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📈 Received data:', data);
+                    
+                    if (data.type === 'price_update') {
+                        updateSymbolPrice(data.symbol, data.price, data.volume || 0);
+                    } else if (data.type === 'alert_triggered') {
+                        showNotification(`🚨 Alert: ${data.symbol} ${data.condition} ₹${data.price}`, 'warning');
+                        if (token) loadAlerts();
+                    }
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
                 }
             };
 
-            ws.onclose = function() {
-                updateConnectionStatus(false);
+            ws.onclose = function(event) {
+                console.log('❌ WebSocket disconnected:', event.code, event.reason);
+                updateConnectionStatus('disconnected');
+                
                 if (reconnectAttempts < maxReconnectAttempts) {
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
                     setTimeout(() => {
                         reconnectAttempts++;
                         connectWebSocket();
-                    }, 2000);
+                    }, delay);
                 }
             };
 
             ws.onerror = function(error) {
                 console.error('WebSocket error:', error);
+                updateConnectionStatus('error');
             };
         }
 
         // Update connection status
-        function updateConnectionStatus(connected) {
-            const status = document.getElementById('connectionStatus');
-            if (connected) {
-                status.innerHTML = '<i class="fas fa-circle"></i><span>Connected</span>';
-                status.className = 'status';
-            } else {
-                status.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
-                status.className = 'status offline';
-            }
-        }
-
-        // Load market symbols
-        async function loadSymbols() {
-            try {
-                const response = await fetch('/api/v1/symbols', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (response.ok) {
-                    const symbols = await response.json();
-                    const symbolsGrid = document.getElementById('symbolsGrid');
-                    symbolsGrid.innerHTML = '';
-
-                    symbols.forEach(symbol => {
-                        const symbolCard = document.createElement('div');
-                        symbolCard.className = 'symbol-card';
-                        symbolCard.innerHTML = `
-                            <div class="symbol-name">${symbol.symbol}</div>
-                            <div class="symbol-price" id="price-${symbol.symbol}">₹${symbol.last_price || '0.00'}</div>
-                            <div class="symbol-change" id="change-${symbol.symbol}">Volume: ${symbol.volume || '0'}</div>
-                        `;
-                        symbolsGrid.appendChild(symbolCard);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading symbols:', error);
-            }
-        }
-
-        // Update symbol price
-        function updateSymbolPrice(symbol, price, volume) {
-            const priceElement = document.getElementById(`price-${symbol}`);
-            const changeElement = document.getElementById(`change-${symbol}`);
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connectionStatus');
             
-            if (priceElement && changeElement) {
-                const oldPrice = parseFloat(priceElement.textContent.replace('₹', ''));
-                const newPrice = parseFloat(price);
-                
-                priceElement.textContent = `₹${newPrice.toFixed(2)}`;
-                changeElement.textContent = `Volume: ${volume}`;
-                
-                if (oldPrice > newPrice) {
-                    priceElement.className = 'symbol-price falling';
-                } else if (oldPrice < newPrice) {
-                    priceElement.className = 'symbol-price';
-                }
+            switch(status) {
+                case 'connected':
+                    statusElement.innerHTML = '<i class="fas fa-circle"></i><span>Connected</span>';
+                    statusElement.className = 'status';
+                    break;
+                case 'connecting':
+                    statusElement.innerHTML = '<i class="fas fa-circle"></i><span>Connecting...</span>';
+                    statusElement.className = 'status connecting';
+                    break;
+                case 'disconnected':
+                case 'error':
+                    statusElement.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
+                    statusElement.className = 'status offline';
+                    break;
             }
         }
 
         // Load alerts
         async function loadAlerts() {
+            if (!token) return;
+            
             try {
                 const response = await fetch('/api/v1/alerts', {
                     headers: {
@@ -729,11 +816,11 @@
                                     ${alert.is_triggered ? 'Triggered' : 'Active'}
                                 </span>
                             </div>
-                            <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-danger" onclick="deleteAlert(${alert.id})">
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button class="btn btn-danger" onclick="deleteAlert(${alert.id})" style="font-size: 0.9rem; padding: 8px 16px;">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
-                                <button class="btn btn-primary" onclick="viewTriggers(${alert.id})">
+                                <button class="btn btn-primary" onclick="viewTriggers(${alert.id})" style="font-size: 0.9rem; padding: 8px 16px; background: #6366f1;">
                                     <i class="fas fa-history"></i> History
                                 </button>
                             </div>
@@ -749,6 +836,11 @@
         // Create alert
         document.getElementById('alertForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            if (!token) {
+                showNotification('Please login to create alerts', 'error');
+                return;
+            }
             
             const formData = {
                 symbol: document.getElementById('alertSymbol').value,
@@ -774,6 +866,7 @@
                 if (response.ok) {
                     showNotification('Alert created successfully!', 'success');
                     document.getElementById('alertForm').reset();
+                    document.getElementById('alertEmail').value = userEmail;
                     loadAlerts();
                 } else {
                     const error = await response.json();
@@ -785,10 +878,9 @@
         });
 
         // Toggle timeframe visibility based on data source
-        const dataSourceEl = document.getElementById('dataSource');
-        const timeframeGroup = document.getElementById('timeframeGroup');
-        dataSourceEl.addEventListener('change', function() {
-            if (dataSourceEl.value === 'ohlcv') {
+        document.getElementById('dataSource').addEventListener('change', function() {
+            const timeframeGroup = document.getElementById('timeframeGroup');
+            if (this.value === 'ohlcv') {
                 timeframeGroup.style.display = 'block';
             } else {
                 timeframeGroup.style.display = 'none';
@@ -797,6 +889,8 @@
 
         // Delete alert
         async function deleteAlert(alertId) {
+            if (!confirm('Are you sure you want to delete this alert?')) return;
+            
             try {
                 const response = await fetch(`/api/v1/alerts/${alertId}`, {
                     method: 'DELETE',
@@ -827,9 +921,15 @@
 
                 if (response.ok) {
                     const triggers = await response.json();
-                    let message = `Alert triggers (${triggers.length}):\n`;
-                    triggers.forEach(trigger => {
-                        message += `${trigger.triggered_at}: ${trigger.symbol} ${trigger.condition} ${trigger.target_price}\n`;
+                    if (triggers.length === 0) {
+                        alert('No trigger history found for this alert.');
+                        return;
+                    }
+                    
+                    let message = `Alert Trigger History (${triggers.length} triggers):\n\n`;
+                    triggers.forEach((trigger, index) => {
+                        const date = new Date(trigger.triggered_at).toLocaleString();
+                        message += `${index + 1}. ${date}\n   Price: ₹${trigger.triggered_price}\n   Email: ${trigger.email_sent ? 'Sent' : 'Failed'}\n\n`;
                     });
                     alert(message);
                 } else {
@@ -849,14 +949,18 @@
             
             setTimeout(() => {
                 notification.classList.remove('show');
-            }, 3000);
+            }, 5000);
         }
 
-        // Initial load
-        if (token && userEmail) {
-            loadSymbols();
-            setInterval(loadSymbols, 10000); // Refresh every 10 seconds
-        }
+        // Auto-retry connection if it fails
+        setInterval(() => {
+            if (!ws || ws.readyState === WebSocket.CLOSED) {
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    connectWebSocket();
+                }
+            }
+        }, 30000);
+
     </script>
 </body>
 </html>
