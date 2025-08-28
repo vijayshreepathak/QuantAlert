@@ -6,7 +6,9 @@
 
 
 
-![License](https://img.shields.io/badge/License Real-Time Notifications**
+
+
+**🎯 Complete Stock Price Alert System with Real-Time Notifications**
 
 *Monitor stock prices -  Set intelligent alerts -  Get instant email notifications*
 
@@ -53,6 +55,26 @@ docker-compose down
 ```
 
 🎉 **That's it!** QuantAlert is now running with mock data for instant testing.
+
+***
+
+## 📱 Screenshots & Live Demo
+
+### 🎨 **Modern Web Interface**
+
+*Beautiful and intuitive alert creation interface with real-time form validation*
+
+### 📊 **Live Market Data Dashboard**
+ 
+*Real-time market data updates with price movement indicators and volume information*
+
+### 🚨 **Alert Processing System**
+
+*Console output showing successful alert triggering and email dispatch when price conditions are met*
+
+### 📧 **Email Notifications**
+
+*Actual email notification received by user demonstrating the complete alert-to-email workflow*
 
 ***
 
@@ -305,7 +327,12 @@ QuantAlert/
 │   ├── 💾 database.py         # Database connection & session
 │   └── 📁 static/             # Frontend assets
 │       └── 🌐 index.html      # Single-page web application
-├── 📁 feeds/                   # Market data feed modules
+├── 📁 Screenshots/             # Application screenshots
+│   ├── 🖼️ pic1.jpg            # Create alert interface
+│   ├── 🖼️ pic2.jpg            # Alert trigger console logs
+│   ├── 🖼️ pic3.jpg            # Email notification received
+│   └── 🖼️ pic4.jpg            # Live market data dashboard
+├── 📁 feeds/                   # Market data feed modules (optional)
 │   ├── 🟡 yahoo_feed.py       # Yahoo Finance integration
 │   ├── 😇 angel_feed.py       # Angel One SmartAPI
 │   ├── 📈 upstox_feed.py      # Upstox integration
@@ -648,6 +675,12 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ***
 
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+***
+
 ## 🙏 Acknowledgments
 
 - **FastAPI** - Modern, fast web framework for building APIs
@@ -662,8 +695,10 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ### 🆘 Getting Help
 
-- 📖 **Contact**: vijayshree9646@gmail.com
-
+- 📖 **Contact**: [vijayshree9646@gmail.com](mailto:vijayshree9646@gmail.com)
+- 🐛 **Bug Reports**: Create an issue in the repository
+- 💡 **Feature Requests**: Open a discussion or issue
+- 📧 **Direct Support**: Email for urgent issues
 
 ### 📊 System Requirements
 
